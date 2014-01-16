@@ -5,6 +5,8 @@
 *.bak
 *.log
 *.jtl
+*.png
+*.html
 coverage
 InstalledFiles
 lib/bundler/man
