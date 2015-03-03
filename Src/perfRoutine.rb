@@ -103,7 +103,7 @@ attr_reader :jtlfile
 	def calcApplRes( flag, msg, url)												# true if NO error detected
 		res=OK
 		if flag
-			$alog.lwrite(msg, 'DEBG')
+			$alog.lwrite(msg, 'INFO')
 		else
 			$alog.lwrite( msg, 'ERR_')
 			res= self.setApplErr( msg)
@@ -180,7 +180,7 @@ end
 #
 	def checkThreshold(pfData, stxd, nameTX, durTX)
 
-	if(stxd.nTX> 0)																# check theresholds
+	if(stxd!=nil)&&(stxd.nTX> 0)																# check theresholds
 		(0..stxd.nTX-1).each do |i|
 			nmTX= stxd.GetTxName(i)
 			cleanNmTX= nmTX.tr(' =%?*','_')										# clean up string
@@ -217,7 +217,7 @@ end
 # Calculate Perf data string from data
 # Time are returned in seconds
 #
-	def CalcPerfData( iServ, warnTO, critTO)
+	def calcPerfData( iServ, warnTO, critTO)
 
 	totTime= 0.0
 	httpRes='OK'

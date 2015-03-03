@@ -8,7 +8,7 @@ At the time being, it allows to run:
 - Jmeter  test plans (*.jmx)  (aka TestType="Jmeter" tests)
 - Selenium IDE test plans (*.html) (aka TestType="SeleniumIDE" tests)
 - Cucumber features
-I plan to add other tools in the near future.
+
 Watir-webdriver is used to executed Selenium IDE plans
 If you use Jmeter, you have to install and configure it.
 If you use Watir Webdriver, you have to install and configure it.
@@ -36,22 +36,37 @@ Each output can be enabled independently of each other:
   When running in "standAlone" mode (see below) a "plan name"-tot.jtl file is produced, holding all the results.
   This file is never overwritten (always appended).
 
+NB purge of older files is left up to the system manager  
+
 Installation
 ============
 You have to download:
 - Ruby 1.9.3
-You have to install the GEMs 
-- bundler
-If you pla touse it, you have to download & install Java & Jmeter:
+You have to install the following GEMs 
+gem install rubygems-update
+gem install rubyzip
+gem install rspec
+
+gem install headless
+gem install ffi
+gem install open4
+gem install os
+gem install mail
+
+gem install net-ssh
+gem install cucumber
+gem install watir-webdriver
+gem install watir-webdriver-performance
+
+If you plan to use it, you have to download & install Java & Jmeter:
 - http://jmeter.apache.org/usermanual/get-started.html#install
 
-You have to copy gemfile
  
 How it works
 ============
 At the beginning of the test, the config file is read, then is starts executing the plans one at a time.
 
-You can select 3 different modes (aka runMode):
+You can select 4 different modes (aka runMode):
 + "Plugin"		This is used to be launched by Nagios as a local probe in active way.
 				Data results are printed on the screen, as required for Nagios plugins.
 				Only the first one plan is executed.
@@ -63,16 +78,17 @@ You can select 3 different modes (aka runMode):
 				++	pollTime="2"		# minutes between polling
 				++	testDuration="8"	# test total duration (minutes)
 				This can be useful to launch a monitoring campaign, without having a monitor system involved.
-+ "Cucumber"	This is used when the library is called ina  cucumber environment
++ "Cucumber"	This is used when the library is called in a cucumber environment
+
 For each plan a related .jtl file is produced.
 This is native behaviour for Jmeter, while it is purposely written for Watir webdriver.
 At the end of execution, the .jtl file is parsed for errors and checked against time thresholds.
 
 You can select the type of browser you want to use.
-I tested with Firefox, Explorer, Chrome. Of course, it must be present on the test system.
+I tested with Firefox, Explorer, Chrome. Of course, they must be present on the test system.
 * At this time, only local browser ha been tested. Distributed configuration will be tested shortly. *
 The browser is created when starting the test, and destroyed at the end. So the same browser is used throughout the whole test. 
-This is a huge advantage in terms of time.
+This is a huge advantage in terms of execution time.
 
 About Firefox, I recommend installing the ESR version, with auto-upgrade disabled.
 Also, with Firefox, you can select the profile you want to use. (Webdriver is the name you find in the reference config file).
@@ -81,7 +97,7 @@ If you select a profile, you have to create it manually.
 If you do not select a profile, a temporary profile is created and it is destroyed at the end of the test.
 
 In Linux
-How to launch it
+How to launch it (standalone mode)
 ================
 (in windows)
 wscan.rb -p .\Cfg\wscan_2-0complete.conf

@@ -2,172 +2,24 @@
 #
 #  Service transaction info( timeouts, names)
 #
-class ServTxData
-	def initialize
-		@nTX= 0
-		@txName= Array.new														#
-		@txCritTO= Array.new													# all values in s
-		@txWarnTO= Array.new													# all values in s
-	end
+require 'mail'
+require_relative 'send_msg.rb'
+require_relative 'html_output.rb'
+require_relative 'send_nsca.rb'
+require_relative 'serv_conf_data.rb'
+require_relative 'perfRoutine.rb'
 
-	attr_accessor :nTX
-#   attr_accessor :txName, :txCritTO, :txWarnTO
-
-	def GetCritTO(i)
-		return @txCritTO[i]
-	end
-
-	def txCritTOAdd( s)
-		@txCritTO.push( s)
-	end
-
-	def GetWarnTO(i)
-		return @txWarnTO[i]
-	end
-
-	def txWarnTOAdd(s)
-		@txWarnTO.push( s)
-	end
-
-	def GetTxName(i)
-		return @txName[i]
-	end
-
-	def txNameAdd(s)
-		@txName.push(s)
-	end
-
+def resText(e)
+	resT= %w(PASS WARNING FAIL UNKNOWN)
+	return resT[e]
 end
-
-################################################################################
-#
-#  Service Configuration struct init
-#
-class ServConfData
-	def initialize
-#   -------------------------------------- # general part
-		@warnTO= 0
-		@critTO= 0
-		@totTO= 0
-
-#   -------------------------------------- # each service part
-		@testType=SELENIUM														# default mode is SeleniumIDE with Webdriver
-																				# allowed: Jmeter, External
-		@res= 'OK'
-		@nTable= 0
-		@nagServer= ''
-		@nagService= ''
-
-		@fOpTable= Array.new													# table names to execute
-		@sTxData= nil															# put here TX data
-	end
-
-
-	attr_accessor :warnTO, :critTO, :totTO
-	attr_accessor :nagServer, :nagService
-	attr_accessor :res, :nTable, :fOpTable, :testType, :sTxData
-
-	def fOpTable
-		@fOpTable
-	end
-
-	def opTableAdd(s)
-		@fOpTable.push(s)														#
-	end
-
-	def TxDataAdd(s)
-		@sTxData=s
-	end
-
-end
-
-def headlessMgr
-    begin
-        if($gcfd.hlmode== true)
-            $gcfd.headless = Headless.new(:dimensions => '1024x768x16')
-            $gcfd.headless.start
-        end
-    rescue
-        msg= 'Cannot activate headless mode. '+ $!.to_s
-        $alog.lwrite(msg, 'ERR_')
-        $alog.lclose
-        p msg                                                                   # return message to Nagios
-        exit!(UNKNOWN)
-    end
-end
-
-
-################################################################################
-#
-#  Config File parsing( each service)
-#
-def setupServiceConf( fh, service)
-
-	begin
-
-		$alog.lwrite('Service ConfData started for '+service, 'INFO')
-		locScfd= ServConfData.new
-		locStxd= ServTxData.new
-
-		locStxd.nTX=0
-		finished= false;
-		while(finished== false) do
-			fline= fh.gets
-			if fline.match(/^(\w+)\="(.+)"/)									#
-				var= Regexp.last_match(1)
-				value= Regexp.last_match(2)
-
-				case var
-				when 'NagiosServer'		then locScfd.nagServer= value
-				when 'NagiosService'	then locScfd.nagService= value
-				when 'TestType'
-										case value.downcase
-										when 'seleniumide'	then locScfd.testType= SELENIUM
-										when 'jmeter'		then locScfd.testType= JMETER
-										when 'cucumber'		then locScfd.testType= CUCUMBER
-										else
-											$alog.lwrite('Test type : '+var +' not supported ', 'ERR_')
-										end
-				when 'WarnTO'			then locScfd.warnTO= value.to_f
-				when 'CritTO'			then locScfd.critTO= value.to_f
-				when 'TotTO'			then locScfd.totTO= value.to_f
-
-				when 'OpTable'			then locScfd.opTableAdd(value)
-				when 'TXname'
-											locStxd.nTX +=1
-											locStxd.txNameAdd( value)
-				when 'TXWarnTO'			then locStxd.txWarnTOAdd( value.to_f)
-				when 'TXCritTO'			then locStxd.txCritTOAdd( value.to_f)
-
-				else
-					$alog.lwrite('Unknow parms: '+var +' /value: ' +value, 'WARN') # vedere se fare logging
-				end
-			elsif fline.match(/^(\[EndServiceConf\])/)								#
-				finished= true;
-			end
-		end
-
-		locScfd.TxDataAdd(locStxd)
-		$gcfd.scfdAdd( locScfd)
-		$gcfd.nServ +=1
-		$alog.lwrite('Service Config Data parsed ', 'INFO')
-		return OK
-
-	rescue
-		msg= 'Service config file error: '+$!.to_s
-		$alog.lwrite(msg, 'ERR_')
-		p msg
-		return UNKNOWN															# Cannot read file: fatal error
-	end
-end
-
 
 ################################################################################
 #
 #  Global Configuration struct init
 #
 class GlobConfData
-	def initialize
+	def initialize(file, mode)
 
 		@fname=''																# file name, non path, no ext
 		@confGlobFile= ''
@@ -240,20 +92,50 @@ class GlobConfData
 		@mailUser=''
 		@mailPwd=''
 		@mail=NIL																# main mail object
-		return
+
+		@iScenario=0															# count scenarios
+#
+#  actual start up
+#
+		if $alog ==nil
+			$alog= LogRoutine::Log.new(OK, 'DEBG')								# open log file, if not open
+		end
+		@confGlobFile= file
+		@hlmode= mode
+		self.ParseConfFile( @confGlobFile)
+
+		$alog.lopen(@logFile, @logMode)
+		$alog.lwrite('Config data read from '+@confGlobFile, 'INFO')
+
+		begin
+			if(@hlmode== true)
+				@headless = Headless.new(:dimensions => '1024x768x16')
+				@headless.start
+				$alog.lwrite('Headless mode driver opened', 'DEBG')
+			end
+		rescue
+			msg= 'Cannot activate headless mode. '+ $!.to_s
+			$alog.lwrite(msg, 'ERR_')
+			$alog.lclose
+			p msg																	# return message to Nagios
+			exit!(UNKNOWN)
+		end
+
+		self.setUpOutput
 	end
 
 	attr_accessor :fname, :confGlobFile, :servConfPath, :logFile, :logMode, :logPath, :dateTemplate, :dirDelim, :opSyst
-	attr_accessor :brwsrType, :brwsrProfile, :testMode, :hlmode, :headless, :res
-
-	attr_accessor :htmlOutFile
-	attr_accessor :nscaEnable, :nscaExeFile, :nscaConfigFile, :nscaServer, :nscaPort
-	attr_accessor :rwFile, :rwEnable, :newConn, :conn,:screenEnable, :screenShotEnable, :screenShotFname, :javaHome, :jmeterHome
-	attr_accessor :runMode, :pollTime, :testDur, :testRepeat, :pageTimeOut
-	attr_accessor :nServ
+	attr_accessor :brwsrType, :brwsrProfile, :testMode, :hlmode, :headless, :res, :downLoadPath
+#	attr_accessor :iScenario
 	attr_reader   :scfd
-	attr_reader   :mailEnable, :mailToAddress, :mailFromAddress, :mailSmpt, :mailPort, :mailUser, :mailPwd
-	attr_accessor :mail
+
+#	attr_accessor :htmlOutFile
+#	attr_accessor :nscaEnable, :nscaExeFile, :nscaConfigFile, :nscaServer, :nscaPort
+#	attr_accessor :rwFile, :rwEnable, :newConn, :conn,:screenEnable, :screenShotEnable, :screenShotFname, :javaHome, :jmeterHome
+	attr_reader   :runMode, :pollTime, :testDur, :testRepeat, :pageTimeOut, :mailEnable
+				  #	attr_accessor :nServ
+#	attr_reader   :mailToAddress, :mailFromAddress, :mailSmpt, :mailPort, :mailUser, :mailPwd
+#	attr_accessor :mail
 
 #### more complex methods
 
@@ -266,68 +148,75 @@ class GlobConfData
 		@scfd.push( s)
 	end
 
-	def ParseGlobalConfData( fh)
+################################################################################
+#
+#  Config File parsing( each service)
+#
+	def ParseGlobalConfData( sDataG)
 	begin
 		$alog.lwrite('Parsing Global Configuration started ', 'INFO')
-		finished= false;
-		while(finished== false) do
-			fline= fh.gets
-			if fline.match(/^(\w+)\="(.+?)"/)									#
-				var= Regexp.last_match(1)
-				value= Regexp.last_match(2)
-
 # puts "var "+var+" value "+ value
-				case var
-				when 'ServConfPath'	then @servConfPath= value
-				when 'LogMode'		then @logMode= value
-				when 'LogPath'		then @logPath= value
-				when 'JavaHome'		then @javaHome= value
-				when 'JmeterHome'	then @jmeterHome= value
-				when 'DateTemplate'	then @dateTemplate= value
 
-				when 'HTMLoutFile'	then @htmlOutFile= value				# simple path name. Put in log dir
+		@logMode= 		sDataG['LogMode']
+		@brwsrType= 	sDataG['Browser'][0..1].downcase								# normalize browser types
+		case @brwsrType
+			when 'ie'
+				@brwsrName='Explorer'
+			when 'ch'
+				@brwsrName='Chrome'
+			else
+				@brwsrName='Firefox'
+		end
 
-				when 'NSCAenable'	then @nscaEnable= SetConfFlag( value, 'NSCA Mode : ')
-				when 'NSCAexeFile'	then @nscaExeFile= value				# full path name
-				when 'NSCAconfigFile' then @nscaConfigFile= value			# full path name
-				when 'NSCAserver'	then @nscaServer= value				# name or value
-				when 'NSCAport'		then @nscaPort= value					# port number
+		@brwsrProfile=	sDataG['Profile'] ? sDataG['Profile']: ''
 
-				when 'ResFileEnable' then @rwEnable= SetConfFlag( value, 'RW file Mode : ')
-				when 'ResFile'		then @rwFile= value					# command file for NAGIOS file mode
-				when 'screenEnable'	then @screenEnable= SetConfFlag( value, 'Screen output : ')
-				when 'screenShotEnable'	then @screenShotEnable= SetConfFlag( value, 'Enable Screen Shots : ')
+		case sDataG['runMode'].downcase
+			when 'plugin'		then @runMode= PLUGIN	# run mode: standalone or passive
+			when 'passive'		then @runMode= PASSIVE
+			when 'standalone' 	then @runMode= STANDALONE
+			when 'cucumber'		then @runMode= CUCUMBER
+			else
+				$alog.lwrite('RunMode : '+sDataG['runMode'] +' not supported ', 'ERR_')   #
+		end
 
-				when 'Browser'		then @brwsrType= value					#
-				when 'Profile'		then @brwsrProfile= value				#
+		@pageTimeOut= sDataG['PageTO'].to_f						# values in seconds
+		@pollTime= 	sDataG['pollTime']*60						  # input in minutes, move to seconds
+		@testDur= 	sDataG['testDuration']*60
 
-				when 'runMode'		then
-										case value.downcase
-										when 'plugin'	then @runMode= PLUGIN	# run mode: standalone or passive
-										when 'passive'	then @runMode= PASSIVE
-										when 'standalone' then @runMode= STANDALONE
-										when 'cucumber'	then @runMode= CUCUMBER
-										else
-											$alog.lwrite('RunMode : '+var +' not supported ', 'WARN')   #
-										end
-				when 'pollTime'		then @pollTime= value.to_i*60			# input in minutes, move to seconds
-				when 'testDuration'	then @testDur= value.to_i*60
-				when 'PageTO'		then @pageTimeOut= value.to_f			# values in seconds
+		@logPath= 	  sDataG['LogPath']
+		@downLoadPath=File.expand_path(@logPath)      #
+		@servConfPath=sDataG['ServConfPath']
+		@dateTemplate=sDataG['DateTemplate']
+		@javaHome= 	  sDataG['JavaHome']
+		@jmeterHome=  sDataG['JmeterHome']
 
-				when 'mailEnable'	then @mailEnable= SetConfFlag( value, 'Mail sending : ')
-				when 'mailToAddress' then @mailToAddress= value
-				when 'mailFromAddress' then @mailFromAddress= value
-				when 'mailSmpt' 	then @mailSmpt= value
-				when 'mailPort' 	then @mailPort= value
-				when 'mailUser' 	then @mailUser= value
-				when 'mailPwd' 		then @mailPwd= value
+		if sDataG['HTMLfile']['HTMLenable']
+			@htmlOutFile=  sDataG['HTMLfile']['HTMLoutFile']
+		end
 
-				else
-					$alog.lwrite('Unknow parm: '+var +' /value: ' +value, 'WARN')   # vedere se fare logging
-				end
-			elsif fline.match(/^(\[EndGlobalConf\])/)							#
-				finished= true;
-			end
+		if sDataG['NSCA']
+			@nscaEnable=	sDataG['NSCA']['NSCAenable']
+			@nscaExeFile= 	sDataG['NSCA']['NSCAexeFile']
+			@nscaConfigFile=sDataG['NSCA']['NSCAconfigFile']
+			@nscaServer= 	sDataG['NSCA']['NSCAserver']
+			@nscaPort=  	sDataG['NSCA']['NSCAport']
+
+		end
+
+		if sDataG['ResFile']['ResFileEnable']
+			@rwFile= sDataG['ResFile']['ResFile']
+		end
+
+		@screenEnable= sDataG['screenEnable']
+		@screenShotEnable= sDataG['screenShotEnable']
+
+		if sDataG['mail']['mailEnable']
+			@mailToAddress =  sDataG['mail']['mailToAddress']
+			@mailFromAddress= sDataG['mail']['mailFromAddress']
+			@mailUser=        sDataG['mail']['mailUser']
+			@mailPwd =        sDataG['mail']['mailPwd']
+			@mailSmpt=        sDataG['mail']['mailSmpt']
+			@mailPort=        sDataG['mail']['mailPort']
 		end
 
 		if(@rwEnable == true) &&(@rwFile== '')									# if command file, check for file name
@@ -357,7 +246,7 @@ class GlobConfData
 		@logFile= @logPath+ cnfname+ '.log'										# calculate log file full name
 
 		t= Time.now()															# create a daily file for HTML output
-		if @htmlOutFile.match(/(.*?)\.htm?/)									# strip exetnsion
+		if @htmlOutFile.match(/(.*?)\.htm?/)									# strip extension
 			var= Regexp.last_match(1)
 			@htmlOutFile=var+ '_'+t.strftime("%Y-%m-%d")+'.html'
 		end
@@ -373,144 +262,248 @@ class GlobConfData
 	$alog.lwrite('Global Configuration parsed: code '+ ret.to_s, 'INFO')
 	return ret
 
+
+
 end
 
-################################################################################
-#
-#  start up and tear down
-#
+	def setupServiceConf( serData, service)
 
-def XOstartUp(file, mode)
+		begin
 
-	$alog=LogRoutine::Log.new(OK, 'DEBG')										# open log file
-	$gcfd.confGlobFile= file
-	$gcfd.hlmode= mode
-	ParseConfFile( $gcfd.confGlobFile)
+			$alog.lwrite('Service ConfData started for '+service, 'INFO')
+			locScfd= ServConfData.new
+			locStxd= ServTxData.new
 
-	$alog.lopen($gcfd.logFile, $gcfd.logMode)
-	$alog.lwrite('Config data read from '+$gcfd.confGlobFile, 'INFO')
+			locStxd.nTX=0
 
-	begin
-		if($gcfd.hlmode== true)
-			$gcfd.headless = Headless.new(:dimensions => '1024x768x16')
-			$gcfd.headless.start
+			case serData['TestType'].downcase
+				when 'seleniumide'	then locScfd.testType= SELENIUM
+				when 'jmeter'		then locScfd.testType= JMETER
+				when 'cucumber'		then locScfd.testType= CUCUMBER
+				else
+					$alog.lwrite('Test type : '+serData['TestType'] +' not supported ', 'ERR_')
+			end
+
+			locScfd.nagServer= serData['NagiosServer']
+			locScfd.nagService= serData['NagiosService']
+
+			locScfd.warnTO= serData['WarnTO'].to_f
+			locScfd.critTO= serData['CritTO'].to_f
+
+			if (serData['OpTable']!=nil)
+				serData['OpTable'].each do |opt|
+					locScfd.opTableAdd( opt)
+				end
+			end
+
+# TODO Service TX management
+# 				when 'TXname'
+#											locStxd.nTX +=1
+#											locStxd.txNameAdd( value)
+#				when 'TXWarnTO'			then locStxd.txWarnTOAdd( value.to_f)
+#				when 'TXCritTO'			then locStxd.txCritTOAdd( value.to_f)
+#		locScfd.TxDataAdd(locStxd)
+			self.scfdAdd( locScfd)
+			@nServ +=1
+			$alog.lwrite('Service Config Data parsed ', 'INFO')
+			return OK
+
+		rescue
+			msg= 'Service config file error: '+$!.to_s
+			$alog.lwrite(msg, 'ERR_')
+			p msg
+			return UNKNOWN															# Cannot read file: fatal error
 		end
-	rescue
-		msg= 'Cannot activate headless mode. '+ $!.to_s
-		$alog.lwrite(msg, 'ERR_')
-		$alog.lclose
-		p msg																	# return message to Nagios
-		exit!(UNKNOWN)
 	end
 
-	if !($gcfd.testMode)														# not in test mode
-		$gcfd.brwsrType= $gcfd.brwsrType[0..1].downcase							# normalize browser types
-		$brws= GenBrowser.new( $gcfd.brwsrType, $gcfd.brwsrProfile)
-		if $brws.status!=OK
-			if($gcfd.hlmode== true)
-				$gcfd.headless.destroy
+	def headlessMgr
+		begin
+			if(@hlmode== true)
+				@headless = Headless.new(:dimensions => '1024x768x16')
+				@headless.start
 			end
-			$brws.XOclose
+		rescue
+			msg= 'Cannot activate headless mode. '+ $!.to_s
+			$alog.lwrite(msg, 'ERR_')
 			$alog.lclose
-			p msg																# return message to Nagios
+			p msg                                                                   # return message to Nagios
 			exit!(UNKNOWN)
 		end
 	end
-	$gcfd.mail= SendMsg.new()														# init wMail result
 
-end
+	def XOtearDown()
 
-def XOtearDown()
-	$brws.XOclose
-	if($gcfd.hlmode== true)
-		$gcfd.headless.destroy
+		msgLog ='Durata test: '+ sprintf('%.3f',self.duration)+ 's'
+		$alog.lwrite(msgLog, 'INFO')
+		self.sendServResClose
+		$brws.XOclose
+		if(@hlmode== true)
+			@headless.destroy
+		end
+
+		$alog.lclose
 	end
-
-	msgLog ='Durata test: '+ sprintf('%.3f',$gcfd.duration)+ 's'
-	$alog.lwrite(msgLog, 'INFO')
-	
-	begin
-		$gcfd.mail.deliverMailMsg($gcfd.logPath, $gcfd.htmlOutFile )
-
-	rescue
-		msg= 'Cannot send mail with text: '+ $!.to_s
-		$alog.lwrite(msg, 'ERR_')
-	end
-	$alog.lclose
-
-end 
-
-end
-################################################################################
-#
-#  Aux configuration procedures
-#
-def SetConfFlag( input, msg)
-	case input.downcase
-	when 'yes'	then retval= true													#
-	when 'no'	then retval= false
-	else 
-		$alog.lwrite('Flag '+msg+ input +' not supported ', 'WARN')   #
-	end
-	return retval
-end
 
 ################################################################################
 #
 #  Main configuration procedures
 #
-def ParseConfFile( confFile)
-	begin
-		fh = File.new( confFile, 'r')
-		ret= 'OK'
-		$gcfd.nServ=0
-		fh.each_line do |fline|
-			if fline.match(/^(\[?\w+\]?)\="(.+?)"/)									#
-				var= Regexp.last_match(1)
-				value= Regexp.last_match(2)
-				case var
-				when '[StartGlobalConf]'		then ret= $gcfd.ParseGlobalConfData( fh)
-				when '[StartServiceConf]'		then ret= setupServiceConf( fh, value)	# add service name
-				else
-					$alog.lwrite('Out positioned parm: '+var +' /value: ' +value, 'WARN')   # vedere se fare logging
-				end
+	def ParseConfFile( confFile)
+		begin
+	#		fh = File.new( confFile, 'r')
+			sData= YAML.load(File.read(confFile))
+			ret= 'OK'
+
+			self.ParseGlobalConfData( sData['GlobalConf'])
+			sData['StartServiceConf'].each do |sConf|
+				self.setupServiceConf( sConf, sConf['name'])
 			end
-	# puts 'var '+var+' value '+ value
+		rescue
+			msg= 'Service config file error: '+$!.to_s
+			$alog.lwrite(msg, 'ERR_')
+			p msg
+			return UNKNOWN															# Cannot read file: fatal error
 		end
-	rescue
-		msg= 'Service config file error: '+$!.to_s
-		$alog.lwrite(msg, 'ERR_')
-		p msg
-		return UNKNOWN															# Cannot read file: fatal error
+
+		if((@runMode== nil)||(@runMode== PASSIVE))						# default is old stype passive mode
+			@runMode= PASSIVE
+			@testRepeat=1
+			@testDur=1
+			@pollTime=1
+		elsif( @runMode== PLUGIN)
+			@testRepeat=1
+			@testDur=1
+			@pollTime=1
+			@nServ=1															# in plugin mode, only one service allowed
+			@screenEnable=false
+		elsif(  @runMode== CUCUMBER)
+			@testRepeat=1
+			@testDur=1
+			@pollTime=1
+			@nServ=1															# in plugin mode, only one service allowed
+		elsif(( @pollTime==0)||(@testDur==0))
+			raise 'RunMode configuration error: '+@pollTime.to_s+' , '+@testDur.to_s
+
+		else
+			@runMode= STANDALONE
+			@testRepeat=(@testDur / @pollTime).round
+			@pollTime= @pollTime											# move to seconds
+		end
+
+		self.headlessMgr()
+
+		return ret
 	end
 
-	if(($gcfd.runMode== nil)||($gcfd.runMode== PASSIVE))						# default is old stype passive mode
-		$gcfd.runMode= PASSIVE
-		$gcfd.testRepeat=1
-		$gcfd.testDur=1
-		$gcfd.pollTime=1
-	elsif( $gcfd.runMode== PLUGIN)
-		$gcfd.testRepeat=1
-		$gcfd.testDur=1
-		$gcfd.pollTime=1
-		$gcfd.nServ=1															# in plugin mode, only one service allowed
-		$gcfd.screenEnable=false
-	elsif(  $gcfd.runMode== CUCUMBER)
-		$gcfd.testRepeat=1
-		$gcfd.testDur=1
-		$gcfd.pollTime=1
-		$gcfd.nServ=1															# in plugin mode, only one service allowed
-	elsif(( $gcfd.pollTime==0)||($gcfd.testDur==0))
-		raise 'RunMode configuration error: '+$gcfd.pollTime.to_s+' , '+$gcfd.testDur.to_s
+################################################################################
+#
+#		Calc service result
+#
+################################################################################
+	def setUpOutput( )
+		opt={
+			:address				=> @mailSmpt,
+			:port					=> @mailPort.to_i,
+			:domain					=> 'localhost',
+			:user_name				=> @mailUser,
+			:password				=> @mailPwd,
+			:authentication			=> 'plain',
+			:enable_starttls_auto	=> true
+		}
+		@mail= SendMsg.new(opt)
+		@htmlHdl=HtmlOutput.new(@logPath+@htmlOutFile, @confGlobFile, true, @runMode) 	#setSpacer=true
 
-	else
-		$gcfd.runMode= STANDALONE
-		$gcfd.testRepeat=($gcfd.testDur / $gcfd.pollTime).round
-		$gcfd.pollTime= $gcfd.pollTime											# move to seconds
 	end
 
 
-	headlessMgr()
+	def setUpServiceRes( srvName, runMode, testType)
+		$pfd=PerfData.new(@logPath+srvName+'.jtl', false, runMode, testType)	# get results file name from service name
+	end
 
-	return ret
+
+	def calcServiceResCucumber(locService, fname)							# only valid for Cucumber
+		locServer= @brwsrName
+		locService= @iScenario.to_s+' '+fname+' '+locService
+		@iScenario +=1
+
+		iServ=0
+		locWarnTO= @scfd[iServ].warnTO
+		locCritTO= @scfd[iServ].critTO
+		$pfd.perfClose(locService, $brws.url.to_s)
+		$pfd.applResMsg= $pfd.calcPerfData(iServ, locWarnTO, locCritTO)
+
+		$pfd.append2JtlTotal()
+		return self.sendServRes( locServer, locService, 0, $pfd.applResMsg, $pfd.retState) # process output
+	end
+
+	def sendServRes(nagserver, nagservice, iTest, msg,  state)
+
+		resMsg=  resText($pfd.retState)
+		msgLine= Time.now.strftime("%Y-%m-%d %H.%M.%S ")+' Service '+nagservice+' closed: run #'+iTest.to_s+' State '+resMsg
+
+		@htmlHdl.addHtmlData(nagserver, nagservice, $pfd.retState, msg)
+		ret= state
+
+		if(@screenEnable==true)
+			p msgLine
+		end
+		if(@nscaEnable==true)
+			begin
+				if((@newConn)==false)
+					@conn= SendNSCA.new(:command => @nscaExeFile,
+											 :host => @nscaServer,
+											 :port => @nscaPort,
+											 :confFile => @nscaConfigFile)
+					@newConn=true
+				end
+
+				ret= @conn.sendNSCA(nagserver, nagservice, msg, state)
+			rescue
+				msg= 'Cannot send NSCA data to server '+ @nscaServer+': '+ $!.to_s
+				$alog.lwrite(msg, 'ERR_')
+				$alog.lclose
+				p msg																# return message to Nagios
+				return(UNKNOWN)
+			end
+		end
+		if(@rwEnable==true)
+			begin
+				ts=(Time.now.to_f ).to_i 											# read time stamp
+				# write result
+				line= '['+ts.to_s+'] PROCESS_SERVICE_CHECK_RESULT;'+nagserver+';'+nagservice+';'+state.to_s+';'+msg.tr("\n",' ')
+				$alog.lwrite(line, 'DEBG')                                          # fprintf(command_file_fp,"[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,host_name,svc_description,return_code,plugin_output);
+
+				fcmdh = File.new( @rwFile, 'a+')
+				fcmdh.puts(line)
+				fcmdh.flush
+				fcmdh.close
+				ret= state
+			rescue
+				msg= 'Cannot write to command file '+ @rwFile+': '+ $!.to_s
+				$alog.lwrite(msg, 'ERR_')
+				$alog.lclose
+				return(UNKNOWN)
+			end
+		end
+#																										# HTML output UNCONDITIONAL
+		if((@mailEnable==true) &&(state !=OK))															# send mail only with alarms/errors etc
+			@mail.sendMailMsg( msgLine)
+		end
+		return state
+	end
+
+	def sendServResClose
+		@htmlHdl.closeHtmlData
+		begin
+			if((@mailEnable==true) &&(state !=OK))															# send mail only with alarms/errors etc
+				@mail.deliverMailMsg(@logPath, @htmlOutFile )
+			end
+		rescue
+			msg= 'Cannot send mail with text: '+ $!.to_s
+			$alog.lwrite(msg, 'ERR_')
+		end
+
+	end
+
 end
+
