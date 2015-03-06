@@ -165,7 +165,7 @@ class GenBrowser          < Watir::Browser
 		when :text
 			if(@wwBrws.text.include? tvalue)			then found= true; end
 		when :link
-			if(@wwBrws.link(:text, tvalue).c)	    then found= true; end
+			if(@wwBrws.link(:text, tvalue).exists?)	    then found= true; end
 		when :span, :css, :id, :element, :type, :value, :style, :class
 			if(@wwBrws.element(tag, tvalue).exists?)	then found= true; end
 		when :name
@@ -188,11 +188,14 @@ class GenBrowser          < Watir::Browser
 		return found
 	end
 
-################################################################################
-#
-# 	Public methods
-#
-################################################################################
+#XO#############################################################################
+#XO
+#XO 	Xover Public Methods
+#XO
+#XO#############################################################################
+#XO	Sleep for a random time
+#XO		rangeTO[0]: min time
+#XO		rangeTO[1]: max time
 	def XOwaitThinkTime(rangeTO)
 		sleepTime= rand(rangeTO[0]..rangeTO[1])
 		$alog.lwrite(('Sleeping for '+sleepTime.to_f.to_s+' s.'), 'DEBG')
@@ -200,7 +203,9 @@ class GenBrowser          < Watir::Browser
 		return OK
 	end
 
-################################################################################
+#XO#############################################################################
+#XO take screenshot
+#XO 	no parameters
 	def XOtakeScreenShot()
 		begin
 			imgName= $gcfd.logPath+@wwBrws.url.tr(" =%?*/\\:",'_')+Time.now.to_i.to_s+'.png'
@@ -214,8 +219,10 @@ class GenBrowser          < Watir::Browser
 		return res
 	end
 
-################################################################################
-	def XOsavePage()
+#XO#############################################################################
+#XO Save HTML page
+#XO 	no parameters
+ 	def XOsavePage()
 		begin
 
 			fileName= $gcfd.logPath+@wwBrws.url.tr(" =%?*/\\:",'_')+Time.now.to_i.to_s+'.html'
@@ -231,8 +238,11 @@ class GenBrowser          < Watir::Browser
 		return res
 	end
 
-################################################################################
-	def XOrecordAppMsg( errFlag, msg)                                             # flag is false if it is an error
+#XO#############################################################################
+#XO Log a message to log file
+#XO		errFlag: false if this is an error, true for just recording a message
+#XO		msg: string to write
+	def XOrecordAppMsg( errFlag, msg)
 		$pfd.calcApplRes( errFlag, msg, @wwBrws.url.to_s)
 		if !errFlag
 			self.XOtakeScreenShot
@@ -240,7 +250,12 @@ class GenBrowser          < Watir::Browser
 		returnRes (errFlag ? OK : CRITICAL)
 	end
 
-################################################################################
+#XO#############################################################################
+#XO	Perform a click on any object
+#XO		tag: HTML selector type (symbol). E.g. xpath: id: name: ...
+#XO		tvalue: string. Actual value for the selector
+#XO	Any type of 'clickable' objects is allowed. If the obj si not present, an error is returned
+#XO	  	This function does not wait: be sure the obj is laready present
 	def XOclick( tag, tvalue)
 		url= @wwBrws.url.to_s													# start timer in any case
 		res= OK																	# default is OK
@@ -337,7 +352,9 @@ class GenBrowser          < Watir::Browser
 		returnRes (found ? OK : CRITICAL)
 	end
 
-################################################################################
+#XO#############################################################################
+#XO	Goto a URL
+#XO 		url: string
 	def XOgoto (url)
 		begin
 			$pfd.tstart( url)
@@ -354,8 +371,12 @@ class GenBrowser          < Watir::Browser
 		returnRes (res )
 	end
 
-################################################################################
-	def XOselectList(tag, tvalue, value)                                     	# vale solo per oggetti singoli
+#XO#############################################################################
+#XO	Select an element from a drop down list
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		value: string. Value in the list to be selected. Only a single value is supported
+	def XOselectList(tag, tvalue, value)
 
 		url= @wwBrws.url.to_s
 		res= OK																	# default is OK
@@ -379,7 +400,11 @@ class GenBrowser          < Watir::Browser
 		returnRes (res )
 	end
 
-################################################################################
+#XO#############################################################################
+#XO Type a  text to any input text area
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		text to be written
 	def XOtypeText(tag, tvalue, text)
 		res= OK
 		begin
@@ -409,8 +434,14 @@ class GenBrowser          < Watir::Browser
 		returnRes (res )
 	end
 
-################################################################################
-	def XOselectWindow(tag, tvalue)												# index, url, title allowed, implicit wait
+#XO#############################################################################
+#XO	Select a Windows (in case there were many opened). Waits for the windows to open
+#XO		tag: selector type (symbol). Allowed symbols: :
+#XO 		:index (unsigned integer): 0 is the first Windows, then 1, 2, ..
+#XO			:url (string)
+#XO			:title (string)
+#XO		tvalue: integer/ string. Actual value for the selector
+	def XOselectWindow(tag, tvalue)
 		res= OK																	# default is OK
 		begin
 			self.setPageTimer()									 				# set or clear the page timer
@@ -460,8 +491,14 @@ class GenBrowser          < Watir::Browser
 		returnRes (res )
 	end
 
-################################################################################
-	def XOcloseWindow(tag, tvalue)												# allpopup index, url, title allowed
+#XO#############################################################################
+#XO Close a Windows. Windows 0 is never closed.
+#XO		tag: selector type (symbol). Allowed symbols: :
+#XO 		:index (unsigned integer): 0 is the first Windows, then 1, 2, ..
+#XO			:url (string)
+#XO			:title (string)
+#XO			:allpopup (nil): all windows except Window 0 are closed
+	def XOcloseWindow(tag, tvalue)
 		res= OK																	# default is OK
 		begin
 			self.setPageTimer()									 				# set or clear the page timer
@@ -514,8 +551,13 @@ class GenBrowser          < Watir::Browser
 		returnRes (res )
 	end
 
-################################################################################
-	def XOgetFieldValue(tag, tvalue)											# css, span, div, xpath, id allowed
+#XO#############################################################################
+#XO Get field value
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name :css :span :div...
+#XO		tvalue: string. Actual value for the selector
+#XO Returns a vector:
+#XO	[returnCode, fieldValue]
+	def XOgetFieldValue(tag, tvalue)
 		res= OK																	# resturn and array: res, t
 		begin
 			if tag==:xpath || tag==:css
@@ -554,7 +596,11 @@ class GenBrowser          < Watir::Browser
 		[returnRes( res ), t]
 	end
 
-################################################################################
+#XO#############################################################################
+#XO Enter special char (as a symbol)
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		special char: see http://watirwebdriver.com/sending-special-keys/ fro key list
 	def XOenterSpecChar(tag, tvalue, spChSym)
 		begin
 			res= OK																# default is OK
@@ -568,15 +614,19 @@ class GenBrowser          < Watir::Browser
 		returnRes (res )
 	end
 
-################################################################################
-	def XOdragAndDrop(tag, tvalue, from, to)
+#XO#############################################################################
+#XO Drag and drop an element
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		right_by: down_by: signed integer: offset in pixel
+	def XOdragAndDrop(tag, tvalue, right_by, down_by)
 
 		url= @wwBrws.url.to_s
 		begin
 			el= @wwBrws.element(tag, tvalue)
 			$pfd.tstart(url)
-			el.drag_and_drop_by( from, to)
-			$pfd.calcApplRes(true, 'Drag and drop '+par1+' by '+par2, url)
+			el.drag_and_drop_by( right_by, down_by)
+			$pfd.calcApplRes(true, 'Drag and drop '+par1+' by '+right_by.to_s+'/'+down_by.to_s, url)
 			sleep TIMETICK														# small sleep to let objects appear
 			res= OK
 		rescue
@@ -586,10 +636,13 @@ class GenBrowser          < Watir::Browser
 		returnRes (res )
 	end
 
-################################################################################
-# This is unified waitfor , verifyText, verify Title etc
-# 	It logs errors/raises exception if it doesn't not find the element
-#
+#XO#############################################################################
+#XO Unified waitfor , verifyText, verify Title etc
+#XO  	It logs errors/raises exception if it doesn't not find the element
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		true if you need to wait for
+#XO	If the element is not found, an CRITICAL/exception is returned
 	def XOlookFor(tag, tvalue, wait)
 		res= OK																	# default is OK
 		url= @wwBrws.url.to_s
@@ -622,12 +675,14 @@ class GenBrowser          < Watir::Browser
 #		return ((($gcfd.runMode==CUCUMBER) &&(res!=OK)) ? raise() : res)
 	end
 
-################################################################################
-# This is unified test function
-# 	It logs errors BUT it does NOT raises exception if it doesn't not find the element
-#	It returns:
-#      OK: found
-#      WARN: not found
+#XO#############################################################################
+#XO This is the unified test function
+#XO It logs errors BUT it does NOT raises exception if it doesn't not find the element.
+#XO It can be used to check for optional elements
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO	It returns:
+#XO      OK: found / WARN: not found
 	def XOcheckFor(tag, tvalue)
 		url= @wwBrws.url.to_s
 		res=OK
@@ -648,7 +703,9 @@ class GenBrowser          < Watir::Browser
 		return res
 	end
 
-################################################################################
+#XO#############################################################################
+#XO This closes properly the browser instance
+#XO 	no parameters
 	def XOclose
 		sleep TIMETICK
 
