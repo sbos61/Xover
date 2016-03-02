@@ -1,9 +1,7 @@
-<<<<<<< HEAD
-Crossover XXXYYYZZZZ
+
+Crossover 
 =======
-Crossover
->>>>>>> parent of 0e181ef... test su readme
-=========
+
 
 Crossover (aka Xover) is a layer allowing to launch web application testing scripts of several type and gathering results in several ways.
 It is written in Ruby.
