@@ -1,4 +1,4 @@
-Crossover XXXYYY
+Crossover XXXYYYZZZZ
 =========
 
 Crossover (aka Xover) is a layer allowing to launch web application testing scripts of several type and gathering results in several ways.
