@@ -1,4 +1,4 @@
-Crossover
+Crossover XXXYYY
 =========
 
 Crossover (aka Xover) is a layer allowing to launch web application testing scripts of several type and gathering results in several ways.
@@ -12,7 +12,7 @@ At the time being, it allows to run:
 Watir-webdriver is used to executed Selenium IDE plans
 If you use Jmeter, you have to install and configure it.
 If you use Watir Webdriver, you have to install and configure it.
-T   ested on Ruby 2.1.7
+Tested on Ruby 2.1.7
 A single configuration file allows to configure all features, load plans etc.
 
 Beside checking for correct execution of the plan, it check for correct timing.
