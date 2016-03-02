@@ -1,0 +1,110 @@
+#XO#############################################################################
+#XO
+#XO 	Xover Public Methods
+#XO
+#XO#############################################################################
+#XO	Sleep for a random time
+#XO		rangeTO[0]: min time
+#XO		rangeTO[1]: max time
+	def XOwaitThinkTime(rangeTO)
+#XO#############################################################################
+#XO	Init screenshot
+#XO 	no parameters
+	def XOinitScreenShot()
+#XO#############################################################################
+#XO	Take screenshot
+#XO		no parameters
+	def XOtakeScreenShot()
+#XO#############################################################################
+#XO	Save HTML page
+#XO 	no parameters
+ 	def XOsavePage()
+#XO#############################################################################
+#XO	Log a message to log file
+#XO		errFlag: false if this is an error, true for just recording a message
+#XO		msg: string to write
+	def XOrecordAppMsg( errFlag, msg)
+#XO#############################################################################
+#XO	Perform a click on any object
+#XO		tag: HTML selector type (symbol). E.g. xpath: id: name: ...
+#XO		tvalue: string. Actual value for the selector
+#XO	Any type of 'clickable' objects is allowed. If the obj si not present, an error is returned
+#XO	  	This function does not wait: be sure the obj is laready present
+	def XOclick( tag, tvalue)
+#XO#############################################################################
+#XO	Goto a URL
+#XO 		url: string
+	def XOgoto (url)
+#XO#############################################################################
+#XO	Select an element from a drop down list
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		value: string. Value in the list to be selected. Only a single value is supported
+	def XOselectList(tag, tvalue, value)
+#XO#############################################################################
+#XO	Type a  text to any input text area
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		text to be written
+	def XOtypeText(tag, tvalue, text)
+#XO#############################################################################
+#XO	Select a Windows (in case there were many opened). Waits for the windows to open
+#XO		tag: selector type (symbol). Allowed symbols:
+#XO 		:index (unsigned integer): 0 is the first Windows, then 1, 2, ..
+#XO			:url (string)
+#XO			:title (string)
+#XO		tvalue: integer/ string. Actual value for the selector
+	def XOselectWindow(tag, tvalue)
+#XO#############################################################################
+#XO	Close a Windows. Windows 0 is never closed.
+#XO		tag: selector type (symbol). Allowed symbols: :
+#XO 		:index (unsigned integer): 0 is the first Windows, then 1, 2, ..
+#XO			:url (string)
+#XO			:title (string)
+#XO			:allpopup (nil): all windows except Window 0 are closed
+	def XOcloseWindow(tag, tvalue)
+#XO#############################################################################
+#XO	Get field value
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name :css :span :div...
+#XO		tvalue: string. Actual value for the selector
+#XO	Returns a vector:
+#XO		[returnCode, fieldValue]
+#XO	For radio & checkbox, a string 'ON' or 'OFF' is returned
+	def XOgetFieldValue(tag, tvalue)
+#XO#############################################################################
+#XO	Enter special char (as a symbol)
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		special char: see http://watirwebdriver.com/sending-special-keys/ for key list
+	def XOenterSpecChar(tag, tvalue, spChSym)
+#XO#############################################################################
+#XO	Drag and drop an element
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		right_by: down_by: signed integer: offset in pixel
+	def XOdragAndDrop(tag, tvalue, right_by, down_by)
+#XO#############################################################################
+#XO	Unified waitfor, verifyText, verify Title etc
+#XO		It logs errors/raises exception if it doesn't not find the element
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO		true if you need to wait for
+#XO	If the element is not found, an CRITICAL/exception is returned
+	def XOlookFor(tag, tvalue, wait)
+#XO#############################################################################
+#XO	This is the unified test function
+#XO	It logs errors BUT it does NOT raises exception if it doesn't not find the element.
+#XO	It can be used to check for optional elements
+#XO		tag: HTML selector type (symbol). E.g. :xpath :id :name ...
+#XO		tvalue: string. Actual value for the selector
+#XO	It returns:
+#XO		OK: found / WARN: not found
+	def XOcheckFor(tag, tvalue)
+#XO#############################################################################
+#XO	This is to record application errors
+#XO 	msg: text message to be logged/  returned to HTML report
+	def XOerror(msg)
+#XO#############################################################################
+#XO	This closes properly the browser instance
+#XO 	no parameters
+	def XOclose
