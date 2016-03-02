@@ -32,10 +32,11 @@ class Log
 		@fName= ''
 		return @state
 	end
+	attr_reader  :fName
 
 	def lwrite2file( msg, msgType)
 		t= Time.now()
-		line= t.strftime("%Y-%m-%d %H.%M.%S")+ ' - '+msgType+' '+ msg
+		line= t.strftime("%Y-%m-%d %H:%M:%S")+ ' - '+msgType+' '+ msg
 		@fHdl.puts line
 		@fHdl.flush
 	end
@@ -58,22 +59,10 @@ class Log
 		end
 
 		begin
-			if(@fName=='')
-				t= Time.now()														# create a daily file
-				if fname.match(/(.*?)\.log/)										# save extension
-					var= Regexp.last_match(1)
-					fname= var+ '_'+t.strftime("%Y-%m-%d")+'.log'
-				end
-				@fHdl = File.new( fname, 'a+')
-				self.lwrite2file('--------- Log file '+fname +' opened', 'INFO')
-				@inmemory= false
-				@fName= fname
-			else
-				@fHdl = File.new( @fName, 'a+')
-				self.lwrite2file('--------- REOPENING file '+@fName +'!!', 'INFO')
-				@inmemory= false
-
-			end
+			@fHdl = File.new( fname, 'a+')
+			self.lwrite2file('--------- Log file '+fname +' opened', 'INFO')
+			@inmemory= false
+			@fName= fname
 			@msgBuffer.each do |line|
 				@fHdl.puts line
 			end

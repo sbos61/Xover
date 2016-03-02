@@ -12,15 +12,16 @@ At the time being, it allows to run:
 Watir-webdriver is used to executed Selenium IDE plans
 If you use Jmeter, you have to install and configure it.
 If you use Watir Webdriver, you have to install and configure it.
-Developed and tested on Ruby 1.9.3
+T   ested on Ruby 2.1.7
 A single configuration file allows to configure all features, load plans etc.
 
-Multiple plan (even of different type) can be executed within a single run.
 Beside checking for correct execution of the plan, it check for correct timing.
 Each plan can have a Warning time duration and a Fail duration.
 You can also specify Warning and Fail thresholds for specific steps of the plan.
 
-Crossover has powerful log tool integrated, which allows you to check the tests execution.
+Crossover has very complete log tool integrated, which allows you to check the tests execution.
+Also, in case of error a screenshot is taken.
+HTML report is produced
 You have to specify log path, and the log level.
 
 Output
@@ -41,22 +42,21 @@ NB purge of older files is left up to the system manager
 Installation
 ============
 You have to download:
-- Ruby 1.9.3
+- Ruby 2.1.7
 You have to install the following GEMs 
 gem install rubygems-update
 gem install rubyzip
 gem install rspec
-
 gem install headless
 gem install ffi
 gem install open4
 gem install os
 gem install mail
-
 gem install net-ssh
 gem install cucumber
 gem install watir-webdriver
 gem install watir-webdriver-performance
+gem install cucumber-formatter
 
 If you plan to use it, you have to download & install Java & Jmeter:
 - http://jmeter.apache.org/usermanual/get-started.html#install
@@ -67,21 +67,17 @@ How it works
 At the beginning of the test, the config file is read, then is starts executing the plans one at a time.
 
 You can select 4 different modes (aka runMode):
-+ "Plugin"		This is used to be launched by Nagios as a local probe in active way.
-				Data results are printed on the screen, as required for Nagios plugins.
-				Only the first one plan is executed.
-+ "passive"		passive Nagios probe.
-				This is used to launch the test periodically (usually via crontab) and send result to Nagios via NSCA.
-				All tests are executed.
++ "Cucumber"	This is used when the library is called in a cucumber environment
 + "standAlone"	This is used to launch manually a cycling monitor. All tests are executed.
 				You must specify:
 				++	pollTime="2"		# minutes between polling
 				++	testDuration="8"	# test total duration (minutes)
 				This can be useful to launch a monitoring campaign, without having a monitor system involved.
-+ "Cucumber"	This is used when the library is called in a cucumber environment
++ "Plugin"		Not supported anymore (at this stage)
++ "passive"		Not supported anymore (at this stage)
 
 For each plan a related .jtl file is produced.
-This is native behaviour for Jmeter, while it is purposely written for Watir webdriver.
+This is native behaviour for Jmeter, while it is purposedly written for Watir webdriver.
 At the end of execution, the .jtl file is parsed for errors and checked against time thresholds.
 
 You can select the type of browser you want to use.
@@ -96,11 +92,27 @@ This make the startup faster, and allows you to manually configure the user pref
 If you select a profile, you have to create it manually.
 If you do not select a profile, a temporary profile is created and it is destroyed at the end of the test.
 
-In Linux
-How to launch it (standalone mode)
+Required directory structure
+================
+/home
+    /project_name
+         /cfg
+         /features
+            /support
+                env.rb
+         /report
+             /runID_name
+    /Xover
+         /cfg
+         /resource
+         /src
+
+How to launch it (cucumber mode)
 ================
 (in windows)
-wscan.rb -p .\Cfg\wscan_2-0complete.conf
+cd \home\project_name
+call cucumber ./features --tags @demo  -r ./features CONF=./Cfg/demo_conf_ch.yml RUNID=runID_name -f html --out ./report/runID_name/ccReport.html     
+
 
 At this time the only other option is:
   -x enable headless mode (Linux only)
