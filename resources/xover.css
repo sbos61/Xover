@@ -1,0 +1,85 @@
+table {
+    font-family: arial; 
+    font-size: 12px; 
+    border-width: 1px; 
+    border-color: #2A5788;
+    border-collapse: collapse; 
+    border-spacing: 1px; 
+    table-layout: fixed; 
+}
+tr:nth-child(even) {
+    background-color: #fafafa
+}
+h1 {
+    text-align: center; 
+    font-weight: bold;
+    color: white;
+    font-family: arial;
+    font-size: 14px; 
+    background: #2A5788;
+    border: #EAF1F7;
+    border-color: #EAF1F7; 
+    padding: 2px; 
+    background-color: #2A5788;
+}
+
+th {
+    text-align: center; 
+    font-weight: bold;
+    color: #EAF1F7;
+    font-family: arial;
+    background: #2A5788;
+    border: #EAF1F7;
+
+    border-color: #EAF1F7; 
+    padding: 4px; 
+    background-color: #2A5788;
+}
+td {
+    text-align: left; 
+    border-color: #2A5788;
+    color:  #2A5788;
+    padding: 6px; 
+/*    background: #eaf1f7; */
+}
+.tdcenter {
+    text-align: center;
+}
+.tdsep {
+    background: #2C3539;
+    padding: 2px;
+}
+.tdright {
+    text-align: right;
+}
+.tdpass {
+    background-color: #32fc32;
+    color: black;    
+    text-align: center;
+    font-weight: bold;
+}
+.tdwarn {
+    background-color: #FFFF66; 
+    color: black;    
+    text-align: center;
+    font-weight: bold;
+}
+
+.tdfail {
+    background-color: #ff1f1f; 
+    color: black;    
+    text-align: center;
+    font-weight: bold;
+}
+.tdunknw {
+    background-color: #0000FF; 
+    color: white;    
+    text-align: center;
+    font-weight: bold;
+}
+
+.tdicon {
+    width:18px;
+    height:18px;
+    border:0;
+}
