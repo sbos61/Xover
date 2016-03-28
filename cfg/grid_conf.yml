@@ -15,5 +15,6 @@ browsers:
     'Explorer': ['localhost']
     'Firefox 38.2.1ESR': ['localhost']
     'Firefox': ['localhost']
+    'Edge': ['localhost']
     
 last: 0
