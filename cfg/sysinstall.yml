@@ -1,0 +1,25 @@
+# --- %YAML:1.0 
+################################################################################
+#
+#       Installation information for Xover
+#
+################################################################################
+#
+cfgDir:         '/cfg/'
+featDir:        '/features/'
+logDir:         '/report/'
+repDir:         '/report/'
+xoRepName:      'xoReport'
+cucumberRepName: 'ccReport'
+
+################################################################################
+#   GLOBAL Paths SET UP
+#
+# Other parms
+# LINUX OpTablePath: '/etc/nagios/objects/'
+DateTemplate: '%Y-%m-%d %H.%M.%S'
+
+#                                                                               # Only needed by Jmeter
+#       JavaHome: "c:/ProgramFiles/Java/Jdk/bin/java"                           # adapted for Windows
+#       JmeterHome: "c:/ProgramFiles/Jmeter/"                                   # 
+cucumberName: "c:/ProgramFiles/Ruby21/bin/cucumber"

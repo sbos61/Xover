@@ -1,0 +1,19 @@
+# --- %YAML:1.0
+###############################
+#
+#  holds info for Selenium grid
+#  simulate query of browser type on multiple system
+#
+###############################
+---
+systems:
+    'localhost': 'free'
+#    'sergio-w8-2': 'free'
+browsers:
+    'Chrome': ['localhost']
+    'Explorer 11': ['localhost']
+    'Explorer': ['localhost']
+    'Firefox 38.2.1ESR': ['localhost']
+    'Firefox': ['localhost']
+    
+last: 0
