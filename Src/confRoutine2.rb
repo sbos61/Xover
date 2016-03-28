@@ -8,7 +8,7 @@ class GlobConfData
 
 	def setOutputConf(sDataG)
 		if sDataG['htmlInfo']['HTMLenable']
-			@htmlOutFile=  sDataG['htmlInfo']['HTMLoutFile']
+#			@htmlOutFile=  sDataG['htmlInfo']['HTMLoutFile']
 		end
 
 		if sDataG['htmlInfo']['HTMLindexFile']
@@ -16,7 +16,7 @@ class GlobConfData
 			@htmlIndexFileFlag= true
 		end
 		if sDataG['resFile']['ResFileEnable']
-			@rwFile= sDataG['resFile']['ResFile']
+			@rwFile= sDataG['resFile']['ResFileName']
 		end
 
 

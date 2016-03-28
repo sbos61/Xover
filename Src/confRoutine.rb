@@ -25,7 +25,7 @@ end
 class GlobConfData
 	def initialize( files, mode)
 		@confGlobFile= files[0]
-		@testId=files[1]                                                        # save conf  filename
+		@runId=files[1]                                                        # save conf  filename
 		self.initInfo( @confGlobFile, mode)
 #
 #  actual start up
@@ -34,12 +34,12 @@ class GlobConfData
 			$alog= LogRoutine::Log.new(OK, 'DEBG')								# open log file, if not open
 		end
 		self.installConfData('../Xover/cfg/sysinstall.yml')
-		self.parseConfFile( @confGlobFile)                                      # save testID
+		self.parseConfFile( @confGlobFile)                                      # save runId
 
 		@gridMgr= RemoteGridManager.new( '../Xover/cfg/grid_conf.yml')	# seek for host
 		@remoteHostName= @gridMgr.reserve( @brwsrName)
 
-		self.setRunFileNames(@remoteHostName, @testId, @confGlobFile)
+		self.setRunFileNames(@remoteHostName, @runId, @confGlobFile)
 		$alog.lopen(@logFile, @logMode)											# log routine add date to file name
 		$alog.lwrite('Config data read from '+@confGlobFile, 'INFO')
 	end
@@ -67,6 +67,9 @@ class GlobConfData
 
 		@brwsrType= ''
 		@brwsrProfile= ''
+		@brwsrContentTypes= ''
+		@brwsrIeNativeEvents= false
+
 		@proxy= nil
 		@testMode= false														# test mode
 		@hlmode= mode															# headless mode
@@ -111,12 +114,9 @@ class GlobConfData
 
 	attr_accessor :fname, :confGlobFile, :servConfPath, :logFile, :logMode, :logPath, :dateTemplate, :dirDelim, :opSyst
 	attr_accessor :brwsrType, :brwsrProfile, :testMode, :hlmode, :headless, :res, :downLoadPath, :proxy
-	attr_reader   :report_url, :reportUrlBase, :report_path, :resource_url, :logURL
-	attr_accessor :servConfData
-	attr_reader   :runMode, :pollTime, :testDur, :testRepeat, :pageTimeOut, :mailEnable
-				  #	attr_accessor :nServ
-#	attr_reader   :mailToAddress, :mailFromAddress, :mailSmpt, :mailPort, :mailUser, :mailPwd
-#	attr_accessor :mail
+	attr_reader   :report_url, :reportUrlBase, :brwsrContentTypes, :brwsrIeNativeEvents, :report_path, :resource_url, :logURL
+	attr_accessor :servConfData, :iScenario
+	attr_reader   :runMode, :runId, :pollTime, :testDur, :testRepeat, :pageTimeOut, :mailEnable
 
 #### more complex methods
 #
@@ -171,17 +171,6 @@ class GlobConfData
 # puts "var "+var+" value "+ value
 
 			@logMode= 		sDataG['LogMode']
-			@brwsrType= 	sDataG['Browser'][0..1].downcase								# normalize browser types
-			case @brwsrType
-				when 'ie'
-					@brwsrName='Explorer'
-				when 'ch'
-					@brwsrName='Chrome'
-				else
-					@brwsrName='Firefox'
-			end
-
-			@brwsrProfile=	sDataG['Profile'] ? sDataG['Profile']: ''
 
 			case sDataG['runMode'].downcase
 				when 'plugin'		then @runMode= PLUGIN	# run mode: standalone or passive
@@ -197,8 +186,8 @@ class GlobConfData
 			else
 				@proxy= nil
 			end
-			@pageTimeOut= sDataG['PageTO'].to_f						# values in seconds
-			@pollTime=	  sDataG['pollTime']*60						  # input in minutes, move to seconds
+			@pageTimeOut= sDataG['PageTO'].to_f							# values in seconds
+			@pollTime=	  sDataG['pollTime']*60						  	# input in minutes, move to seconds
 			@testDur= 	  sDataG['testDuration']*60
 
 			@logPath=		'.'+ @installData['logDir']
@@ -229,8 +218,6 @@ class GlobConfData
 			end
 			$alog.lwrite('Service ConfData started for '+service, 'INFO')
 			locServConfData= serData
-#			locServConfData= ServTxData.new
-#			locStxd.nTX=0
 
 			case locServConfData['testType'].downcase
 				when 'seleniumide'	then locServConfData['testType']= SELENIUM
@@ -239,6 +226,21 @@ class GlobConfData
 				else
 					$alog.lwrite('Test type : '+serData['TestType'] +' not supported ', 'ERR_')
 			end
+			@brwsrType= 	locServConfData['browser'][0..1].downcase								# normalize browser types
+			case @brwsrType
+				when 'ie'
+					@brwsrName='Explorer'
+					@brwsIeNativeEvents= locServConfData['ieNativeEvents'] ? true: false
+				when 'ch'
+					@brwsrName='Chrome'
+				when 'ed'
+					@brwsrName='Edge'
+				else
+					@brwsrName='Firefox'
+					@brwsrProfile=	locServConfData['profile'] ? locServConfData['profile']: ''
+			end
+			@brwsrContentTypes= locServConfData['contentTypes'] ? locServConfData['contentTypes']: ''
+
 			$alog.lwrite('Reading Service Timeout for '+service, 'INFO')
 
 			locServConfData['warnTO']= serData['warnTO'].to_f
@@ -310,7 +312,7 @@ class GlobConfData
 				self.setupServiceConf( sConf, sConf['service'])
 			end
 		rescue
-			msg= 'Service config file error: '+$!.to_s
+			msg= 'Service config file error: '+$!.to_s+"\n"+caller
 			$alog.lwrite(msg, 'ERR_')
 			p msg
 			return UNKNOWN														# Cannot read file: fatal error

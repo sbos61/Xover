@@ -31,7 +31,7 @@ class GenBrowser          < Watir::Browser
 				case @brwsrType
 					when 'ie'
 			            @brTypeSym= :ie
-						@wwBrws= Watir::Browser.new(@brTypeSym, :native_events=>false)
+						@wwBrws= Watir::Browser.new(@brTypeSym, :native_events=> $gcfd.brwsrIeNativeEvents)
 					when 'ch'
 						@brTypeSym= :chrome
 						prefs = {
@@ -42,14 +42,6 @@ class GenBrowser          < Watir::Browser
 						}
 						switches = Array.new
 						proxy= $gcfd.proxy
-						if(proxy)
-							switches << '--proxy-server=http://'+proxy['user']+':'+proxy['passwd']+'@'+ proxy['proxyServer']
-							if proxy['noProxyfor']
-								switches << '--proxy-bypass-list='+proxy['noProxyfor']
-							end
-						else
-							switches << '--no-proxy-server'
-						end
 						@wwBrws= Watir::Browser.new @brTypeSym, :prefs => prefs, :switches => switches
 					when 'ed'
 						@brTypeSym= :edge
